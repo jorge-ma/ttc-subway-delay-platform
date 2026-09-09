@@ -73,3 +73,26 @@ database inserted zero additional events, confirming idempotency.
 Database credentials are supplied through environment variables. The
 real `.env` file is excluded from version control, while `.env.example`
 documents the required settings without containing credentials.
+
+## Phase 4 — FastAPI reliability service
+
+The project provides a read-only FastAPI service backed by PostgreSQL.
+
+Available endpoints include:
+
+- `GET /health` — process health
+- `GET /ready` — PostgreSQL readiness
+- `GET /api/v1/reliability/summary` — system-wide metrics
+- `GET /api/v1/reliability/lines` — line rankings
+- `GET /api/v1/reliability/stations` — station rankings with line filtering
+- `GET /api/v1/reliability/causes` — incident-code rankings with line filtering
+- `GET /api/v1/reliability/monthly` — chronological monthly trends
+
+The API validates query parameters, normalizes line filters, returns
+HTTP 503 when PostgreSQL is unavailable, and publishes an OpenAPI
+document with interactive documentation at `/docs`.
+
+Automated tests cover query calculations, ordering, filtering, input
+validation, dependency failures and database cleanup. Cross-endpoint
+checks confirm that line and monthly event totals match the system-wide
+total of 43,105 unique events.
