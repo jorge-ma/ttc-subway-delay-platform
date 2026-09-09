@@ -1,0 +1,44 @@
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+*.egg-info/
+
+# Environment variables and credentials
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.kubeconfig
+
+# TTC datasets and generated output
+data/*
+!data/sample/
+!data/sample/.gitkeep
+*.csv
+*.xlsx
+
+# Database backups
+*.dump
+*.sql
+*.backup
+SHA256SUMS
+
+# Milestone and transfer archives
+*.tar
+*.tar.gz
+*.zip
+
+# Logs and temporary files
+*.log
+tmp/
+temp/
+
+# Operating systems and editors
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
