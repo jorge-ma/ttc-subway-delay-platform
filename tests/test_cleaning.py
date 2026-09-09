@@ -113,3 +113,24 @@ def test_day_is_derived_from_event_date():
     result = clean_data(make_raw_data(Day="Incorrect"))
 
     assert result.valid_data.loc[0, "day"] == "Thursday"
+
+
+
+def test_line_two_descriptions_become_bd():
+    descriptions = (
+        "LINE 2 - BLOOR DANFORT",
+        "LINE 2 BLOOR-DANFORTH",
+    )
+
+    for description in descriptions:
+        result = clean_data(make_raw_data(Line=description))
+
+        assert result.valid_data.loc[0, "line"] == "BD"
+
+
+def test_network_wide_line_value_becomes_multiple():
+    result = clean_data(
+        make_raw_data(Line="BD/YUS/SHP/FWLRT/ECLRT")
+    )
+
+    assert result.valid_data.loc[0, "line"] == "MULTIPLE"

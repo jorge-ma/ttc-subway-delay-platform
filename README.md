@@ -48,3 +48,28 @@ The complete source dataset is not committed to this repository.
 Place a TTC subway-delay CSV file at:
 
 data/sample/ttc-subway-delays.csv
+
+## Phase 3 — PostgreSQL persistence
+
+The application uses PostgreSQL and SQLAlchemy to persist cleaned TTC
+delay events and ingestion audit records.
+
+Implemented capabilities include:
+
+- Environment-based database configuration
+- SQLAlchemy models for delay events and ingestion runs
+- Alembic-managed schema migrations
+- Transactional loading with rollback on failure
+- SHA-256 record keys for idempotent ingestion
+- Tracking of inserted, rejected and duplicate records
+- Separate application and test databases
+- Integration tests for successful, repeated and failed loads
+
+The source dataset contained 43,169 rows. Cleaning identified 43,105
+unique events and 64 content duplicates. The first production ingestion
+stored all 43,105 unique events. Repeating the ingestion against the test
+database inserted zero additional events, confirming idempotency.
+
+Database credentials are supplied through environment variables. The
+real `.env` file is excluded from version control, while `.env.example`
+documents the required settings without containing credentials.

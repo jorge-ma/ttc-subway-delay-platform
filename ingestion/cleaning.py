@@ -32,6 +32,13 @@ OUTPUT_COLUMNS = (
 )
 
 
+LINE_ALIASES = {
+    "LINE 2 - BLOOR DANFORT": "BD",
+    "LINE 2 BLOOR-DANFORTH": "BD",
+    "BD/YUS/SHP/FWLRT/ECLRT": "MULTIPLE",
+}
+
+
 @dataclass(frozen=True)
 class CleaningResult:
     """Contain the separate outputs from one cleaning operation."""
@@ -55,6 +62,14 @@ def _normalize_optional_text(series: pd.Series) -> pd.Series:
     normalized = normalized.mask(normalized == "")
 
     return normalized.fillna("UNKNOWN")
+
+
+def _normalize_line(series: pd.Series) -> pd.Series:
+    """Normalize missing values and known TTC line aliases."""
+
+    normalized = _normalize_optional_text(series)
+
+    return normalized.replace(LINE_ALIASES)
 
 
 def _is_non_integer(series: pd.Series) -> pd.Series:
@@ -89,7 +104,7 @@ def clean_data(raw_data: pd.DataFrame) -> CleaningResult:
     data["station"] = _normalize_required_text(data["station"])
     data["code"] = _normalize_required_text(data["code"])
     data["bound"] = _normalize_optional_text(data["bound"])
-    data["line"] = _normalize_optional_text(data["line"])
+    data["line"] = _normalize_line(data["line"])
 
     for column in INTEGER_COLUMNS:
         data[column] = pd.to_numeric(data[column], errors="coerce")

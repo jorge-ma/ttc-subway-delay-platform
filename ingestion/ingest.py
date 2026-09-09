@@ -1,4 +1,4 @@
-"""Run the TTC CSV cleaning pipeline and write controlled outputs."""
+"""Run the TTC cleaning pipeline and optionally persist its results."""
 
 import argparse
 import os
@@ -7,7 +7,10 @@ from pathlib import Path
 from tempfile import NamedTemporaryFile
 
 import pandas as pd
+from sqlalchemy.exc import SQLAlchemyError
 
+from database.connection import create_database_engine
+from database.loader import PersistenceResult, persist_cleaning_result
 from ingestion.cleaning import CleaningResult, clean_data
 from ingestion.explore import load_csv
 
@@ -96,12 +99,33 @@ def run_ingestion(
     return result
 
 
-def parse_arguments() -> argparse.Namespace:
+def persist_result(
+    input_path: Path,
+    result: CleaningResult,
+) -> PersistenceResult:
+    """Persist a cleaning result and always release the database pool."""
+
+    engine = create_database_engine()
+
+    try:
+        return persist_cleaning_result(
+            engine=engine,
+            source_file=input_path,
+            result=result,
+        )
+    finally:
+        engine.dispose()
+
+
+def parse_arguments(
+    arguments: list[str] | None = None,
+) -> argparse.Namespace:
     """Parse ingestion command-line arguments."""
 
     parser = argparse.ArgumentParser(
         description=(
-            "Clean, validate, and deduplicate TTC subway-delay data."
+            "Clean, validate, deduplicate, and optionally persist TTC "
+            "subway-delay data."
         )
     )
     parser.add_argument(
@@ -128,23 +152,39 @@ def parse_arguments() -> argparse.Namespace:
         default=DEFAULT_DUPLICATE_OUTPUT,
         help="Destination for duplicate records.",
     )
+    parser.add_argument(
+        "--load-database",
+        action="store_true",
+        help="Persist valid records using the configured PostgreSQL database.",
+    )
 
-    return parser.parse_args()
+    return parser.parse_args(arguments)
 
 
-def main() -> int:
+def main(arguments: list[str] | None = None) -> int:
     """Execute the command-line ingestion pipeline."""
 
-    arguments = parse_arguments()
+    parsed_arguments = parse_arguments(arguments)
 
     try:
         result = run_ingestion(
-            input_path=arguments.input,
-            processed_output=arguments.processed_output,
-            rejected_output=arguments.rejected_output,
-            duplicate_output=arguments.duplicate_output,
+            input_path=parsed_arguments.input,
+            processed_output=parsed_arguments.processed_output,
+            rejected_output=parsed_arguments.rejected_output,
+            duplicate_output=parsed_arguments.duplicate_output,
         )
-    except (FileNotFoundError, OSError, ValueError) as error:
+        persistence_result = (
+            persist_result(parsed_arguments.input, result)
+            if parsed_arguments.load_database
+            else None
+        )
+    except (
+        FileNotFoundError,
+        OSError,
+        ValueError,
+        RuntimeError,
+        SQLAlchemyError,
+    ) as error:
         print(f"Ingestion failed: {error}", file=sys.stderr)
         return 1
 
@@ -152,10 +192,18 @@ def main() -> int:
     print(f"Source rows: {result.source_rows}")
     print(f"Valid rows: {len(result.valid_data)}")
     print(f"Rejected rows: {len(result.rejected_data)}")
-    print(f"Duplicate rows: {len(result.duplicate_data)}")
-    print(f"Processed output: {arguments.processed_output}")
-    print(f"Rejected output: {arguments.rejected_output}")
-    print(f"Duplicate output: {arguments.duplicate_output}")
+    print(f"Input duplicate rows: {len(result.duplicate_data)}")
+    print(f"Processed output: {parsed_arguments.processed_output}")
+    print(f"Rejected output: {parsed_arguments.rejected_output}")
+    print(f"Duplicate output: {parsed_arguments.duplicate_output}")
+
+    if persistence_result is not None:
+        print(f"Ingestion run ID: {persistence_result.ingestion_run_id}")
+        print(f"Database inserts: {persistence_result.inserted_rows}")
+        print(
+            "Total duplicate rows: "
+            f"{persistence_result.duplicate_rows}"
+        )
 
     return 0
 
