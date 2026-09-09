@@ -42,3 +42,9 @@ portfolio implementation.
 The project uses the City of Toronto TTC Subway Delay Data dataset.
 
 The complete source dataset is not committed to this repository.
+
+## Local data ingestion
+
+Place a TTC subway-delay CSV file at:
+
+data/sample/ttc-subway-delays.csv
