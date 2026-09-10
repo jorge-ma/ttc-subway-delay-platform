@@ -96,3 +96,40 @@ Automated tests cover query calculations, ordering, filtering, input
 validation, dependency failures and database cleanup. Cross-endpoint
 checks confirm that line and monthly event totals match the system-wide
 total of 43,105 unique events.
+
+## Phase 5 — Streamlit dashboard
+
+The project includes an interactive Streamlit dashboard backed by the
+FastAPI reliability service.
+
+Dashboard features include:
+
+- System-wide reliability summary metrics
+- Chronological monthly delay trend
+- Subway-line delay comparison
+- Top affected station rankings
+- Top incident-cause rankings
+- Interactive filtering by subway line
+- Graceful handling of API connection failures
+
+The dashboard restricts its line selector and comparison chart to recognized
+TTC subway lines. Bus routes, unknown values and network-wide records are not
+shown as individual subway lines.
+
+The dashboard API client supports configuration through the
+`TTC_API_BASE_URL` environment variable. Automated tests validate API URL
+configuration, endpoint requests, filtering parameters and connection-error
+handling.
+
+Run the API:
+
+    python -m uvicorn api.main:app \
+      --host 127.0.0.1 \
+      --port 8000
+
+Run the dashboard in a second terminal:
+
+    python -m streamlit run dashboard/app.py \
+      --server.address 127.0.0.1 \
+      --server.port 8501
+.
