@@ -1,0 +1,97 @@
+name: ttc-reliability-v2
+
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    restart: unless-stopped
+
+  migrate:
+    image: ttc-reliability-api:v2-local
+    command:
+      - python
+      - -m
+      - alembic
+      - upgrade
+      - head
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: "5432"
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  ingest:
+    image: ttc-reliability-api:v2-local
+    command:
+      - python
+      - -m
+      - ingestion.ingest
+      - --input
+      - /data/ttc-subway-delays.csv
+      - --processed-output
+      - /tmp/ttc-subway-delays-clean.csv
+      - --rejected-output
+      - /tmp/ttc-subway-delays-rejected.csv
+      - --duplicate-output
+      - /tmp/ttc-subway-delays-duplicates.csv
+      - --load-database
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: "5432"
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - ./data/sample/ttc-subway-delays.csv:/data/ttc-subway-delays.csv:ro
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    profiles:
+      - tools
+    restart: "no"
+
+  api:
+    image: ttc-reliability-api:v2-local
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: "5432"
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "127.0.0.1:8000:8000"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  dashboard:
+    image: ttc-reliability-dashboard:v2-local
+    environment:
+      TTC_API_BASE_URL: http://api:8000
+    ports:
+      - "127.0.0.1:8501:8501"
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  postgres-data:

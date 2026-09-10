@@ -132,4 +132,68 @@ Run the dashboard in a second terminal:
     python -m streamlit run dashboard/app.py \
       --server.address 127.0.0.1 \
       --server.port 8501
+
+## Phase 6 — Containerization and local deployment
+
+The FastAPI service and Streamlit dashboard are packaged as separate Docker
+images. Both application containers run as the non-root user `10001:10001`
+and include health checks.
+
+Docker Compose provides a reproducible local environment containing:
+
+- PostgreSQL 16
+- Alembic database migration
+- Idempotent TTC data ingestion
+- FastAPI reliability service
+- Streamlit dashboard
+- Persistent PostgreSQL storage using a named Docker volume
+
+### Build the images
+
+    docker build \
+      --file Dockerfile.api \
+      --tag ttc-reliability-api:v2-local \
+      .
+
+    docker build \
+      --file Dockerfile.dashboard \
+      --tag ttc-reliability-dashboard:v2-local \
+      .
+
+### Configure the environment
+
+    cp compose.env.example .env.compose
+
+Edit `.env.compose` and provide a private local PostgreSQL password. This file
+is excluded from Git.
+
+### Start the database and migration
+
+    docker compose \
+      --env-file .env.compose \
+      up --detach postgres migrate
+
+### Load the dataset
+
+    docker compose \
+      --env-file .env.compose \
+      --profile tools \
+      run --rm ingest
+
+The ingestion process is idempotent. Reprocessing the same source file does
+not create duplicate database records.
+
+### Start the applications
+
+    docker compose \
+      --env-file .env.compose \
+      up --detach api dashboard
+
+The local services are available at:
+
+- API documentation: `http://127.0.0.1:8000/docs`
+- Dashboard: `http://127.0.0.1:8501`
+
+PostgreSQL data remains available when containers are removed and recreated
+because the Compose named volume is retained.
 .
