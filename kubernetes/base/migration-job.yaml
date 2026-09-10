@@ -1,0 +1,50 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: ttc-db-migration
+  namespace: ttc-monitor
+spec:
+  backoffLimit: 3
+
+  template:
+    metadata:
+      labels:
+        app: ttc-db-migration
+
+    spec:
+      restartPolicy: Never
+
+      containers:
+        - name: migration
+          image: ghcr.io/jorge-ma/ttc-reliability-v2-dashboard:0.1.0
+          imagePullPolicy: Always
+
+          command:
+            - alembic
+            - upgrade
+            - head
+
+          env:
+            - name: POSTGRES_HOST
+              value: postgres
+
+            - name: POSTGRES_PORT
+              value: "5432"
+
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: POSTGRES_DB
+
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: POSTGRES_USER
+
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: POSTGRES_PASSWORD
