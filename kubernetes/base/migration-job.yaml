@@ -3,6 +3,7 @@ kind: Job
 metadata:
   name: ttc-db-migration
   namespace: ttc-monitor
+
 spec:
   backoffLimit: 3
 
@@ -12,16 +13,14 @@ spec:
         app: ttc-db-migration
 
     spec:
-      template:
-        spec:
+      restartPolicy: Never
 
-          restartPolicy: Never
-          imagePullSecrets:
-            -name: ghcr-secret  
+      imagePullSecrets:
+        - name: ghcr-secret
 
       containers:
         - name: migration
-          image: ghcr.io/jorge-ma/ttc-reliability-v2-dashboard:0.1.0
+          image: ghcr.io/jorge-ma/ttc-reliability-v2-api:0.1.0
           imagePullPolicy: Always
 
           command:
@@ -53,3 +52,4 @@ spec:
                 secretKeyRef:
                   name: postgres-secret
                   key: POSTGRES_PASSWORD
+
