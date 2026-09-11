@@ -12,7 +12,12 @@ spec:
         app: ttc-db-migration
 
     spec:
-      restartPolicy: Never
+      template:
+        spec:
+
+          restartPolicy: Never
+          imagePullSecrets:
+            -name: ghcr-secret  
 
       containers:
         - name: migration
