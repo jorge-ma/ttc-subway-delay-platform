@@ -45,7 +45,7 @@ spec:
               containerPort: 8501
 
           env:
-            - name: API_BASE_URL
+            - name: TTC_API_BASE_URL
               value: http://ttc-api:8000
 
           startupProbe:
