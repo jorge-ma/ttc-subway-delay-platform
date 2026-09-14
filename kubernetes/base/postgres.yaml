@@ -37,8 +37,8 @@ spec:
           image: postgres:16
 
           securityContext:
-            runAsUser: 999
-            runAsGroup: 999
+            runAsUser: 1029
+            runAsGroup: 100
             runAsNonRoot: true
             allowPrivilegeEscalation: false  
 
