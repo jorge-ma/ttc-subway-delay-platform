@@ -36,6 +36,12 @@ spec:
         - name: postgres
           image: postgres:16
 
+          securityContext:
+            runAsUser: 999
+            runAsGroup: 999
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false  
+
           ports:
             - name: postgres
               containerPort: 5432
