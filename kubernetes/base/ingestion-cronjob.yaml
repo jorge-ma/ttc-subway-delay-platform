@@ -26,6 +26,10 @@ spec:
           imagePullSecrets:
             - name: ghcr-secret
 
+          volumes:
+            - name: tmp
+              emptyDir: {}
+              
           containers:
             - name: ingestion
               image: ghcr.io/jorge-ma/ttc-reliability-v2-api:0.1.1
