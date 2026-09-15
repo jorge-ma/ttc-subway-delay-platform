@@ -1,0 +1,62 @@
+{
+  "dashboard": {
+    "id": null,
+    "uid": "ttc-monitor",
+    "title": "TTC Reliability Monitor",
+    "tags": [
+      "ttc",
+      "kubernetes"
+    ],
+    "timezone": "browser",
+    "schemaVersion": 39,
+    "version": 0,
+    "refresh": "30s",
+    "time": {
+      "from": "now-6h",
+      "to": "now"
+    },
+    "panels": [
+      {
+        "id": 1,
+        "title": "TTC API Request Rate",
+        "type": "timeseries",
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 0
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": ""
+        },
+        "targets": [
+          {
+            "refId": "A",
+            "expr": "sum(rate(ttc_api_requests_total[5m]))",
+            "legendFormat": "Requests/sec",
+            "range": true
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "reqps"
+          },
+          "overrides": []
+        },
+        "options": {
+          "legend": {
+            "displayMode": "list",
+            "placement": "bottom"
+          },
+          "tooltip": {
+            "mode": "single"
+          }
+        }
+      }
+    ]
+  },
+  "overwrite": true
+}
+
+
