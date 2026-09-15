@@ -1,0 +1,59 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: ttc-ingestion
+  namespace: ttc-monitor
+
+spec:
+  schedule: "0 6 * * *"
+
+  concurrencyPolicy: Forbid
+
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+
+      template:
+        spec:
+          restartPolicy: Never
+
+          imagePullSecrets:
+            - name: ghcr-secret
+
+          containers:
+            - name: ingestion
+              image: ghcr.io/jorge-ma/ttc-reliability-v2-api:0.1.1
+              imagePullPolicy: IfNotPresent
+
+              command:
+                - python
+                - -m
+                - ingestion.run_ingestion
+
+              env:
+                - name: POSTGRES_HOST
+                  value: postgres
+
+                - name: POSTGRES_PORT
+                  value: "5432"
+
+                - name: POSTGRES_DB
+                  valueFrom:
+                    secretKeyRef:
+                      name: postgres-secret
+                      key: POSTGRES_DB
+
+                - name: POSTGRES_USER
+                  valueFrom:
+                    secretKeyRef:
+                      name: postgres-secret
+                      key: POSTGRES_USER
+
+                - name: POSTGRES_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: postgres-secret
+                      key: POSTGRES_PASSWORD
