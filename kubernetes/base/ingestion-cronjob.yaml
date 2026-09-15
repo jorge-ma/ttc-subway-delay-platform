@@ -31,6 +31,17 @@ spec:
               image: ghcr.io/jorge-ma/ttc-reliability-v2-api:0.1.1
               imagePullPolicy: IfNotPresent
 
+              securityContext:
+                runAsNonRoot: true
+                runAsUser: 10001
+                runAsGroup: 10001
+                AllowPrivilegeEscalation: false
+                ReadOnlyRootFileSystem: true
+                capabilities:
+                  drop:
+                    - All
+
+
               resources:
                 requests:
                   cpu: "100m"
