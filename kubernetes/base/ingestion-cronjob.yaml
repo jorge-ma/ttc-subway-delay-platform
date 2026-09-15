@@ -1,12 +1,13 @@
 apiVersion: batch/v1
 kind: CronJob
+
 metadata:
   name: ttc-ingestion
   namespace: ttc-monitor
 
 spec:
   schedule: "0 6 * * *"
-  timeZone: "America/Toronto"  
+  timeZone: "America/Toronto"
 
   concurrencyPolicy: Forbid
 
@@ -15,7 +16,7 @@ spec:
 
   jobTemplate:
     spec:
-      activeDeadlineSeconds : 900
+      activeDeadlineSeconds: 900
       backoffLimit: 1
 
       template:
@@ -29,14 +30,14 @@ spec:
             - name: ingestion
               image: ghcr.io/jorge-ma/ttc-reliability-v2-api:0.1.1
               imagePullPolicy: IfNotPresent
+
               resources:
                 requests:
                   cpu: "100m"
                   memory: "256Mi"
                 limits:
                   cpu: "500m"
-                memory: "512 mi"
-                
+                  memory: "512Mi"
 
               command:
                 - python
