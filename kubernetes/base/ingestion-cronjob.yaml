@@ -45,6 +45,11 @@ spec:
                   drop:
                     - All
 
+              volumeMounts:
+                - name: tmp
+                  mountPath: /tmp
+
+
 
               resources:
                 requests:
