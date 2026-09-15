@@ -53,10 +53,84 @@
             "mode": "single"
           }
         }
+      },
+      {
+        "id": 2,
+        "title": "TTC API Error Rate",
+        "type": "timeseries",
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 0
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": ""
+        },
+        "targets": [
+          {
+            "refId": "A",
+            "expr": "sum(rate(ttc_api_requests_total{status=~\"5..\"}[5m]))",
+            "legendFormat": "5xx errors/sec",
+            "range": true
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "reqps"
+          },
+          "overrides": []
+        },
+        "options": {
+          "legend": {
+            "displayMode": "list",
+            "placement": "bottom"
+          },
+          "tooltip": {
+            "mode": "single"
+          }
+        }
+      },
+      {
+        "id": 3,
+        "title": "TTC API Average Latency",
+        "type": "timeseries",
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 8
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": ""
+        },
+        "targets": [
+          {
+            "refId": "A",
+            "expr": "sum(rate(ttc_api_request_duration_seconds_sum[5m])) / sum(rate(ttc_api_request_duration_seconds_count[5m]))",
+            "legendFormat": "Average latency",
+            "range": true
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s"
+          },
+          "overrides": []
+        },
+        "options": {
+          "legend": {
+            "displayMode": "list",
+            "placement": "bottom"
+          },
+          "tooltip": {
+            "mode": "single"
+          }
+        }
       }
     ]
   },
   "overwrite": true
 }
-
-
