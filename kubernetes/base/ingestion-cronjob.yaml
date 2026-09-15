@@ -29,7 +29,7 @@ spec:
           volumes:
             - name: tmp
               emptyDir: {}
-              
+
           containers:
             - name: ingestion
               image: ghcr.io/jorge-ma/ttc-reliability-v2-api:0.1.1
@@ -39,17 +39,15 @@ spec:
                 runAsNonRoot: true
                 runAsUser: 10001
                 runAsGroup: 10001
-                AllowPrivilegeEscalation: false
-                ReadOnlyRootFileSystem: true
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
                 capabilities:
                   drop:
-                    - All
+                    - ALL
 
               volumeMounts:
                 - name: tmp
                   mountPath: /tmp
-
-
 
               resources:
                 requests:
@@ -88,3 +86,4 @@ spec:
                     secretKeyRef:
                       name: postgres-secret
                       key: POSTGRES_PASSWORD
+
