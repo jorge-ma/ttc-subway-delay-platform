@@ -6,6 +6,10 @@ from fastapi import FastAPI, HTTPException, Query, status
 from pydantic import BaseModel
 from sqlalchemy.exc import SQLAlchemyError
 
+from api.ingestion import (
+    IngestionStatus,
+    fetch_latest_ingestion,
+)
 from api.reliability import (
     CauseReliability,
     LineReliability,
@@ -82,6 +86,43 @@ def readiness() -> ReadinessResponse:
             engine.dispose()
 
     return ReadinessResponse(status="ready")
+
+
+@app.get(
+    "/api/v1/ingestion/latest",
+    response_model=IngestionStatus,
+    tags=["ingestion"],
+    summary="Get latest ingestion status",
+)
+def latest_ingestion() -> IngestionStatus:
+    """Return the most recent TTC ingestion execution."""
+
+    engine = None
+
+    try:
+        engine = create_database_engine()
+        result = fetch_latest_ingestion(engine)
+
+        if result is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="No ingestion runs found",
+            )
+
+        return result
+
+    except HTTPException:
+        raise
+
+    except (RuntimeError, SQLAlchemyError) as error:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Ingestion status is temporarily unavailable",
+        ) from error
+
+    finally:
+        if engine is not None:
+            engine.dispose()
 
 
 @app.get(
@@ -189,7 +230,7 @@ def cause_reliability(
 
     if normalized_line == "":
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="Line cannot be blank",
         )
 
