@@ -1,8 +1,15 @@
 """FastAPI application and TTC reliability endpoints."""
 
+import time
 from typing import Annotated, Literal
 
-from fastapi import FastAPI, HTTPException, Query, status
+from fastapi import FastAPI, HTTPException, Query, Request, Response, status
+from prometheus_client import (
+    CONTENT_TYPE_LATEST,
+    Counter,
+    Histogram,
+    generate_latest,
+)
 from pydantic import BaseModel
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -35,6 +42,65 @@ app = FastAPI(
 )
 
 
+# ---------------------------------------------------------------------------
+# Prometheus metrics
+# ---------------------------------------------------------------------------
+
+API_REQUESTS_TOTAL = Counter(
+    "ttc_api_requests_total",
+    "Total number of HTTP requests handled by the TTC API.",
+    ["method", "path", "status"],
+)
+
+API_REQUEST_DURATION_SECONDS = Histogram(
+    "ttc_api_request_duration_seconds",
+    "HTTP request duration for the TTC API.",
+    ["method", "path"],
+)
+
+
+@app.middleware("http")
+async def prometheus_middleware(request: Request, call_next):
+    """Record HTTP request count and request duration."""
+
+    start_time = time.perf_counter()
+
+    response = await call_next(request)
+
+    duration = time.perf_counter() - start_time
+    path = request.url.path
+
+    API_REQUESTS_TOTAL.labels(
+        method=request.method,
+        path=path,
+        status=str(response.status_code),
+    ).inc()
+
+    API_REQUEST_DURATION_SECONDS.labels(
+        method=request.method,
+        path=path,
+    ).observe(duration)
+
+    return response
+
+
+@app.get(
+    "/metrics",
+    include_in_schema=False,
+)
+def metrics() -> Response:
+    """Expose application metrics in Prometheus format."""
+
+    return Response(
+        content=generate_latest(),
+        headers={"Content-Type": CONTENT_TYPE_LATEST},
+    )
+
+
+# ---------------------------------------------------------------------------
+# Platform response models
+# ---------------------------------------------------------------------------
+
 class HealthResponse(BaseModel):
     """Response returned by the process health probe."""
 
@@ -46,6 +112,10 @@ class ReadinessResponse(BaseModel):
 
     status: Literal["ready"]
 
+
+# ---------------------------------------------------------------------------
+# Platform endpoints
+# ---------------------------------------------------------------------------
 
 @app.get(
     "/health",
@@ -73,6 +143,7 @@ def readiness() -> ReadinessResponse:
     try:
         engine = create_database_engine()
         verify_database_connection(engine)
+
     except (RuntimeError, SQLAlchemyError) as error:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -81,12 +152,17 @@ def readiness() -> ReadinessResponse:
                 "database": "unavailable",
             },
         ) from error
+
     finally:
         if engine is not None:
             engine.dispose()
 
     return ReadinessResponse(status="ready")
 
+
+# ---------------------------------------------------------------------------
+# Ingestion endpoints
+# ---------------------------------------------------------------------------
 
 @app.get(
     "/api/v1/ingestion/latest",
@@ -125,6 +201,10 @@ def latest_ingestion() -> IngestionStatus:
             engine.dispose()
 
 
+# ---------------------------------------------------------------------------
+# Reliability endpoints
+# ---------------------------------------------------------------------------
+
 @app.get(
     "/api/v1/reliability/summary",
     response_model=ReliabilitySummary,
@@ -139,11 +219,13 @@ def reliability_summary() -> ReliabilitySummary:
     try:
         engine = create_database_engine()
         return fetch_reliability_summary(engine)
+
     except (RuntimeError, SQLAlchemyError) as error:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Reliability data is temporarily unavailable",
         ) from error
+
     finally:
         if engine is not None:
             engine.dispose()
@@ -164,12 +246,17 @@ def line_reliability(
 
     try:
         engine = create_database_engine()
-        return fetch_line_reliability(engine, limit=limit)
+        return fetch_line_reliability(
+            engine,
+            limit=limit,
+        )
+
     except (RuntimeError, SQLAlchemyError) as error:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Reliability data is temporarily unavailable",
         ) from error
+
     finally:
         if engine is not None:
             engine.dispose()
@@ -187,7 +274,11 @@ def station_reliability(
 ) -> list[StationReliability]:
     """Return station statistics, optionally filtered by TTC line."""
 
-    normalized_line = line.strip().upper() if line is not None else None
+    normalized_line = (
+        line.strip().upper()
+        if line is not None
+        else None
+    )
 
     if normalized_line == "":
         raise HTTPException(
@@ -199,16 +290,19 @@ def station_reliability(
 
     try:
         engine = create_database_engine()
+
         return fetch_station_reliability(
             engine,
             limit=limit,
             line=normalized_line,
         )
+
     except (RuntimeError, SQLAlchemyError) as error:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Reliability data is temporarily unavailable",
         ) from error
+
     finally:
         if engine is not None:
             engine.dispose()
@@ -226,7 +320,11 @@ def cause_reliability(
 ) -> list[CauseReliability]:
     """Return incident-code statistics, optionally filtered by line."""
 
-    normalized_line = line.strip().upper() if line is not None else None
+    normalized_line = (
+        line.strip().upper()
+        if line is not None
+        else None
+    )
 
     if normalized_line == "":
         raise HTTPException(
@@ -238,16 +336,19 @@ def cause_reliability(
 
     try:
         engine = create_database_engine()
+
         return fetch_cause_reliability(
             engine,
             limit=limit,
             line=normalized_line,
         )
+
     except (RuntimeError, SQLAlchemyError) as error:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Reliability data is temporarily unavailable",
         ) from error
+
     finally:
         if engine is not None:
             engine.dispose()
@@ -264,7 +365,11 @@ def monthly_reliability(
 ) -> list[MonthlyReliability]:
     """Return chronological monthly statistics, optionally by line."""
 
-    normalized_line = line.strip().upper() if line is not None else None
+    normalized_line = (
+        line.strip().upper()
+        if line is not None
+        else None
+    )
 
     if normalized_line == "":
         raise HTTPException(
@@ -276,15 +381,19 @@ def monthly_reliability(
 
     try:
         engine = create_database_engine()
+
         return fetch_monthly_reliability(
             engine,
             line=normalized_line,
         )
+
     except (RuntimeError, SQLAlchemyError) as error:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Reliability data is temporarily unavailable",
         ) from error
+
     finally:
         if engine is not None:
             engine.dispose()
+
