@@ -129,8 +129,206 @@
             "mode": "single"
           }
         }
+      },
+      {
+        "id": 4,
+        "title": "Last Ingestion Success",
+        "type": "stat",
+        "gridPos": {
+          "h": 6,
+          "w": 6,
+          "x": 12,
+          "y": 8
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": ""
+        },
+        "targets": [
+          {
+            "refId": "A",
+            "expr": "max(ttc_ingestion_last_run_success)",
+            "instant": true
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "mappings": [
+              {
+                "type": "value",
+                "options": {
+                  "0": {
+                    "text": "Failed"
+                  },
+                  "1": {
+                    "text": "Successful"
+                  }
+                }
+              }
+            ]
+          },
+          "overrides": []
+        },
+        "options": {
+          "reduceOptions": {
+            "calcs": [
+              "lastNotNull"
+            ],
+            "values": false
+          },
+          "orientation": "auto",
+          "textMode": "auto"
+        }
+      },
+      {
+        "id": 5,
+        "title": "Last Successful Ingestion",
+        "type": "stat",
+        "gridPos": {
+          "h": 6,
+          "w": 6,
+          "x": 18,
+          "y": 8
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": ""
+        },
+        "targets": [
+          {
+            "refId": "A",
+            "expr": "max(ttc_ingestion_last_success_timestamp_seconds) * 1000",
+            "instant": true
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "dateTimeAsIso"
+          },
+          "overrides": []
+        },
+        "options": {
+          "reduceOptions": {
+            "calcs": [
+              "lastNotNull"
+            ],
+            "values": false
+          },
+          "orientation": "auto",
+          "textMode": "auto"
+        }
+      },
+      {
+        "id": 6,
+        "title": "Ingestion Source Rows",
+        "type": "stat",
+        "gridPos": {
+          "h": 6,
+          "w": 6,
+          "x": 0,
+          "y": 16
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": ""
+        },
+        "targets": [
+          {
+            "refId": "A",
+            "expr": "max(ttc_ingestion_source_rows)",
+            "instant": true
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "none"
+          },
+          "overrides": []
+        },
+        "options": {
+          "reduceOptions": {
+            "calcs": [
+              "lastNotNull"
+            ],
+            "values": false
+          }
+        }
+      },
+      {
+        "id": 7,
+        "title": "Ingestion Rejected Rows",
+        "type": "stat",
+        "gridPos": {
+          "h": 6,
+          "w": 6,
+          "x": 6,
+          "y": 16
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": ""
+        },
+        "targets": [
+          {
+            "refId": "A",
+            "expr": "max(ttc_ingestion_rejected_rows)",
+            "instant": true
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "none"
+          },
+          "overrides": []
+        },
+        "options": {
+          "reduceOptions": {
+            "calcs": [
+              "lastNotNull"
+            ],
+            "values": false
+          }
+        }
+      },
+      {
+        "id": 8,
+        "title": "Ingestion Failed Runs",
+        "type": "stat",
+        "gridPos": {
+          "h": 6,
+          "w": 6,
+          "x": 12,
+          "y": 16
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": ""
+        },
+        "targets": [
+          {
+            "refId": "A",
+            "expr": "max(ttc_ingestion_failed_runs)",
+            "instant": true
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "none"
+          },
+          "overrides": []
+        },
+        "options": {
+          "reduceOptions": {
+            "calcs": [
+              "lastNotNull"
+            ],
+            "values": false
+          }
+        }
       }
     ]
   },
   "overwrite": true
 }
+
+
