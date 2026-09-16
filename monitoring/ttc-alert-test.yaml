@@ -1,0 +1,21 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+
+metadata:
+  name: ttc-alert-test
+  namespace: monitoring
+  labels:
+    release: monitoring
+
+spec:
+  groups:
+    - name: ttc-test
+      rules:
+        - alert: TTCMonitoringTest
+          expr: vector(1)
+          for: 1m
+          labels:
+            severity: warning
+          annotations:
+            summary: "TTC monitoring test alert"
+            description: "Temporary alert used to verify Prometheus alerting."
