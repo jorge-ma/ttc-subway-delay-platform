@@ -3,6 +3,8 @@ kind: Service
 metadata:
   name: ttc-api
   namespace: ttc-monitor
+  labels:
+    app: ttc-api
 spec:
   type: ClusterIP
   selector:
@@ -36,7 +38,7 @@ spec:
 
       containers:
         - name: api
-          image: ghcr.io/jorge-ma/ttc-reliability-v2-api:0.1.0
+          image: ghcr.io/jorge-ma/ttc-reliability-v2-api:0.1.4
           imagePullPolicy: Always
 
           ports:

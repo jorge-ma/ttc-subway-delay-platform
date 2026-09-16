@@ -7,11 +7,14 @@ from fastapi import FastAPI, HTTPException, Query, Request, Response, status
 from prometheus_client import (
     CONTENT_TYPE_LATEST,
     Counter,
+    Gauge,
     Histogram,
     generate_latest,
 )
 from pydantic import BaseModel
+from sqlalchemy import func, select
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import Session
 
 from api.ingestion import (
     IngestionStatus,
@@ -33,6 +36,7 @@ from database.connection import (
     create_database_engine,
     verify_database_connection,
 )
+from database.models import IngestionRun
 
 
 app = FastAPI(
@@ -43,7 +47,7 @@ app = FastAPI(
 
 
 # ---------------------------------------------------------------------------
-# Prometheus metrics
+# Prometheus API metrics
 # ---------------------------------------------------------------------------
 
 API_REQUESTS_TOTAL = Counter(
@@ -57,6 +61,114 @@ API_REQUEST_DURATION_SECONDS = Histogram(
     "HTTP request duration for the TTC API.",
     ["method", "path"],
 )
+
+
+# ---------------------------------------------------------------------------
+# Prometheus ingestion metrics
+# ---------------------------------------------------------------------------
+
+INGESTION_LAST_SUCCESS_TIMESTAMP_SECONDS = Gauge(
+    "ttc_ingestion_last_success_timestamp_seconds",
+    "Unix timestamp of the most recent successful ingestion.",
+)
+
+INGESTION_LAST_RUN_SUCCESS = Gauge(
+    "ttc_ingestion_last_run_success",
+    "Whether the most recent ingestion completed successfully: 1=yes, 0=no.",
+)
+
+INGESTION_SOURCE_ROWS = Gauge(
+    "ttc_ingestion_source_rows",
+    "Number of source rows in the most recent ingestion.",
+)
+
+INGESTION_VALID_ROWS = Gauge(
+    "ttc_ingestion_valid_rows",
+    "Number of valid rows in the most recent ingestion.",
+)
+
+INGESTION_REJECTED_ROWS = Gauge(
+    "ttc_ingestion_rejected_rows",
+    "Number of rejected rows in the most recent ingestion.",
+)
+
+INGESTION_DUPLICATE_ROWS = Gauge(
+    "ttc_ingestion_duplicate_rows",
+    "Number of duplicate rows in the most recent ingestion.",
+)
+
+INGESTION_INSERTED_ROWS = Gauge(
+    "ttc_ingestion_inserted_rows",
+    "Number of database inserts in the most recent ingestion.",
+)
+
+INGESTION_FAILED_RUNS = Gauge(
+    "ttc_ingestion_failed_runs",
+    "Total number of failed ingestion runs stored in PostgreSQL.",
+)
+
+INGESTION_METRICS_REFRESH_SUCCESS = Gauge(
+    "ttc_ingestion_metrics_refresh_success",
+    "Whether ingestion metrics were successfully refreshed from PostgreSQL.",
+)
+
+
+def refresh_ingestion_metrics() -> None:
+    """Refresh ingestion Prometheus gauges from PostgreSQL."""
+
+    engine = None
+
+    try:
+        engine = create_database_engine()
+
+        with Session(engine) as session:
+            latest_run = session.scalar(
+                select(IngestionRun)
+                .order_by(IngestionRun.id.desc())
+                .limit(1)
+            )
+
+            latest_successful_run = session.scalar(
+                select(IngestionRun)
+                .where(IngestionRun.status == "completed")
+                .order_by(IngestionRun.completed_at.desc())
+                .limit(1)
+            )
+
+            failed_runs = session.scalar(
+                select(func.count())
+                .select_from(IngestionRun)
+                .where(IngestionRun.status == "failed")
+            )
+
+        if latest_run is not None:
+            INGESTION_SOURCE_ROWS.set(latest_run.source_rows)
+            INGESTION_VALID_ROWS.set(latest_run.valid_rows)
+            INGESTION_REJECTED_ROWS.set(latest_run.rejected_rows)
+            INGESTION_DUPLICATE_ROWS.set(latest_run.duplicate_rows)
+            INGESTION_INSERTED_ROWS.set(latest_run.inserted_rows)
+
+            INGESTION_LAST_RUN_SUCCESS.set(
+                1 if latest_run.status == "completed" else 0
+            )
+
+        if (
+            latest_successful_run is not None
+            and latest_successful_run.completed_at is not None
+        ):
+            INGESTION_LAST_SUCCESS_TIMESTAMP_SECONDS.set(
+                latest_successful_run.completed_at.timestamp()
+            )
+
+        INGESTION_FAILED_RUNS.set(failed_runs or 0)
+        INGESTION_METRICS_REFRESH_SUCCESS.set(1)
+
+    except (RuntimeError, SQLAlchemyError):
+        INGESTION_METRICS_REFRESH_SUCCESS.set(0)
+
+    finally:
+        if engine is not None:
+            engine.dispose()
 
 
 @app.middleware("http")
@@ -89,7 +201,9 @@ async def prometheus_middleware(request: Request, call_next):
     include_in_schema=False,
 )
 def metrics() -> Response:
-    """Expose application metrics in Prometheus format."""
+    """Expose application and ingestion metrics in Prometheus format."""
+
+    refresh_ingestion_metrics()
 
     return Response(
         content=generate_latest(),
@@ -246,6 +360,7 @@ def line_reliability(
 
     try:
         engine = create_database_engine()
+
         return fetch_line_reliability(
             engine,
             limit=limit,
@@ -396,4 +511,3 @@ def monthly_reliability(
     finally:
         if engine is not None:
             engine.dispose()
-
