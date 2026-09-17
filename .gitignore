@@ -1,5 +1,5 @@
-
 # Python
+
 .venv/
 __pycache__/
 *.py[cod]
@@ -7,6 +7,7 @@ __pycache__/
 *.egg-info/
 
 # Environment variables and credentials
+
 .env
 .env.*
 !.env.example
@@ -14,33 +15,45 @@ __pycache__/
 *.key
 *.kubeconfig
 
+# Docker Compose local environment
+
+.env.compose
+
 # TTC datasets and generated output
+
 data/*
 !data/sample/
 !data/sample/.gitkeep
+!data/reference/
+!data/reference/ttc-delay-codes.csv
+
 *.csv
+!data/reference/ttc-delay-codes.csv
+
 *.xlsx
 
 # Database backups
+
 *.dump
 *.sql
 *.backup
 SHA256SUMS
 
 # Milestone and transfer archives
+
 *.tar
 *.tar.gz
 *.zip
 
 # Logs and temporary files
+
 *.log
 tmp/
 temp/
 
 # Operating systems and editors
+
 .DS_Store
 Thumbs.db
 .vscode/
 .idea/
-
-.env.compose
