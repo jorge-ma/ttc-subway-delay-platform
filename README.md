@@ -1,199 +1,215 @@
 # TTC Reliability Monitor
 
-A containerized data platform that processes Toronto subway-delay
-records and presents reliability information through an API and
-interactive dashboard.
+A containerized data platform that turns Toronto subway-delay records into
+rider-focused reliability insights, with a FastAPI service, Streamlit dashboard,
+and Kubernetes deployment monitored through Prometheus and Grafana.
 
 ## Project objective
 
-The project demonstrates an end-to-end DevOps workflow using Python,
-PostgreSQL, FastAPI, Streamlit, Docker, Kubernetes, Prometheus,
-Grafana, and GitHub Actions.
+Demonstrate an end-to-end DevOps workflow: validated data ingestion, persistent
+storage, tested APIs, accessible visualizations, container delivery, and
+operational monitoring.
 
 ## Architecture
 
-1. Python retrieves and validates TTC delay records.
-2. Valid records are stored in PostgreSQL.
-3. FastAPI provides reliability aggregates.
-4. Streamlit presents the results to users.
-5. Prometheus monitors application and cluster health.
-6. Grafana displays operational dashboards.
-7. GitHub Actions tests and publishes container images.
+```text
+City of Toronto Open Data
+          |
+          v
+Python ingestion (scheduled Kubernetes CronJob)
+          |
+          v
+      PostgreSQL
+          |
+          v
+       FastAPI <--- Official TTC delay-code reference data
+       /     \
+      v       v
+ Streamlit  /metrics
+ dashboard     |
+               v
+         ServiceMonitor
+               |
+               v
+           Prometheus <--- PrometheusRule ingestion alerts
+               |
+               v
+            Grafana <--- ConfigMap + dashboard sidecar
+```
+
+GitHub Actions tests and publishes container images to GitHub Container Registry.
+The ServiceMonitor configures Prometheus discovery and scraping of FastAPI metrics.
 
 ## Technology stack
 
-- Python and Pandas
-- PostgreSQL and Alembic
-- FastAPI
-- Streamlit
-- Docker and Docker Compose
-- Kubernetes
+- Python, Pandas, SQLAlchemy, and Alembic
+- PostgreSQL, FastAPI, and Streamlit
+- Docker, Docker Compose, and Kubernetes
 - Prometheus, Alertmanager, and Grafana
-- GitHub Actions
-- GitHub Container Registry
+- GitHub Actions and GitHub Container Registry
 
 ## Project status
 
-Version 2 is currently being rebuilt as a clean and repeatable
-portfolio implementation.
+Version 2 is deployed to a kubeadm Kubernetes cluster in the `ttc-monitor`
+namespace, with scheduled ingestion, a rider-focused dashboard, and operational
+monitoring.
+
+| Application | Deployed image |
+| --- | --- |
+| FastAPI | `ghcr.io/jorge-ma/ttc-reliability-v2-api:0.1.5` |
+| Streamlit | `ghcr.io/jorge-ma/ttc-reliability-v2-dashboard:0.1.1` |
 
 ## Data source
 
-The project uses the City of Toronto TTC Subway Delay Data dataset.
+The project uses the City of Toronto TTC Subway Delay Data dataset. The complete
+source dataset is not committed to the repository.
 
-The complete source dataset is not committed to this repository.
+### Delay-code enrichment
+
+Official TTC code descriptions published through City of Toronto Open Data are
+normalized into `data/reference/ttc-delay-codes.csv`. The current dataset has
+**130 of 139 unique incident codes mapped (approximately 93.5%)**. This measures
+unique-code coverage, not the percentage of delay events covered.
+
+Unmapped codes are labeled **Undocumented TTC code**; their meanings are not
+guessed. Original incident codes and available official descriptions remain
+accessible in the detailed dashboard view.
 
 ## Local data ingestion
 
-Place a TTC subway-delay CSV file at:
-
-data/sample/ttc-subway-delays.csv
+Place a TTC subway-delay CSV at `data/sample/ttc-subway-delays.csv`, then run the
+Compose ingestion command below.
 
 ## Phase 3 — PostgreSQL persistence
 
-The application uses PostgreSQL and SQLAlchemy to persist cleaned TTC
-delay events and ingestion audit records.
+PostgreSQL stores cleaned delay events and ingestion audit records. SQLAlchemy
+models and Alembic migrations support transactional loading, rollback on failure,
+and SHA-256 record keys for idempotency. Ingestion tracks inserted, rejected, and
+duplicate records.
 
-Implemented capabilities include:
-
-- Environment-based database configuration
-- SQLAlchemy models for delay events and ingestion runs
-- Alembic-managed schema migrations
-- Transactional loading with rollback on failure
-- SHA-256 record keys for idempotent ingestion
-- Tracking of inserted, rejected and duplicate records
-- Separate application and test databases
-- Integration tests for successful, repeated and failed loads
-
-The source dataset contained 43,169 rows. Cleaning identified 43,105
-unique events and 64 content duplicates. The first production ingestion
-stored all 43,105 unique events. Repeating the ingestion against the test
-database inserted zero additional events, confirming idempotency.
-
-Database credentials are supplied through environment variables. The
-real `.env` file is excluded from version control, while `.env.example`
-documents the required settings without containing credentials.
+The initial source contained 43,169 rows: 43,105 unique events and 64 content
+duplicates. Repeat ingestion in the test database inserted no additional events.
+Integration tests cover successful, repeated, and failed loads using a separate
+test database.
 
 ## Phase 4 — FastAPI reliability service
 
-The project provides a read-only FastAPI service backed by PostgreSQL.
+The read-only API provides PostgreSQL-backed aggregates and interactive
+documentation at `/docs`.
 
-Available endpoints include:
+| Endpoint | Purpose |
+| --- | --- |
+| `GET /health` | Process health |
+| `GET /ready` | PostgreSQL readiness |
+| `GET /metrics` | Prometheus metrics |
+| `GET /api/v1/reliability/summary` | Overall reliability metrics |
+| `GET /api/v1/reliability/lines` | Line rankings |
+| `GET /api/v1/reliability/stations` | Station rankings with line filtering |
+| `GET /api/v1/reliability/causes` | Incident-code rankings with official descriptions and line filtering |
+| `GET /api/v1/reliability/monthly` | Chronological monthly trends |
 
-- `GET /health` — process health
-- `GET /ready` — PostgreSQL readiness
-- `GET /api/v1/reliability/summary` — system-wide metrics
-- `GET /api/v1/reliability/lines` — line rankings
-- `GET /api/v1/reliability/stations` — station rankings with line filtering
-- `GET /api/v1/reliability/causes` — incident-code rankings with line filtering
-- `GET /api/v1/reliability/monthly` — chronological monthly trends
+The API validates query parameters, normalizes line filters, and returns HTTP 503
+when PostgreSQL is unavailable. Tests cover calculations, ordering, filtering,
+validation, and dependency failures.
 
-The API validates query parameters, normalizes line filters, returns
-HTTP 503 when PostgreSQL is unavailable, and publishes an OpenAPI
-document with interactive documentation at `/docs`.
+### Station-ranking cleanup
 
-Automated tests cover query calculations, ordering, filtering, input
-validation, dependency failures and database cleanup. Cross-endpoint
-checks confirm that line and monthly event totals match the system-wide
-total of 43,105 unique events.
+Line-wide labels such as `LINE 1`, `LINE 2`, and `LINE 4` are excluded from station
+rankings so they are not presented as physical stations. These events remain in
+the dataset and contribute to overall, monthly, line, and cause statistics under
+the applicable filters.
 
 ## Phase 5 — Streamlit dashboard
 
-The project includes an interactive Streamlit dashboard backed by the
-FastAPI reliability service.
+The rider-focused dashboard provides:
 
-Dashboard features include:
+- Delay-event totals, accumulated delay hours, and average delay duration
+- Latest available data date and month-over-month reliability changes
+- Monthly trends and active-line comparisons
+- Station rankings and rider-friendly delay-cause categories
+- Line filtering and optional detailed TTC codes and descriptions
 
-- System-wide reliability summary metrics
-- Chronological monthly delay trend
-- Subway-line delay comparison
-- Top affected station rankings
-- Top incident-cause rankings
-- Interactive filtering by subway line
-- Graceful handling of API connection failures
+Active rider-facing views include **Line 1 — Yonge-University**, **Line 2 —
+Bloor-Danforth**, and **Line 4 — Sheppard** only. **Line 3 — Scarborough** is
+excluded because it is closed; historical records are retained. Bus routes,
+unknown values, and network-wide labels are not presented as individual subway lines.
 
-The dashboard restricts its line selector and comparison chart to recognized
-TTC subway lines. Bus routes, unknown values and network-wide records are not
-shown as individual subway lines.
+Cause categories include customer and security incidents, medical emergencies,
+train/mechanical problems, infrastructure and signals, weather, operations, and
+other/uncategorized. These are **non-official presentation groupings**, not TTC
+classifications.
 
-The dashboard API client supports configuration through the
-`TTC_API_BASE_URL` environment variable. Automated tests validate API URL
-configuration, endpoint requests, filtering parameters and connection-error
-handling.
-
-Run the API:
-
-    python -m uvicorn api.main:app \
-      --host 127.0.0.1 \
-      --port 8000
-
-Run the dashboard in a second terminal:
-
-    python -m streamlit run dashboard/app.py \
-      --server.address 127.0.0.1 \
-      --server.port 8501
+The dashboard uses `TTC_API_BASE_URL` to reach FastAPI and handles API connection
+failures gracefully. Application health, ingestion status, and API performance
+are presented separately in Grafana.
 
 ## Phase 6 — Containerization and local deployment
 
-The FastAPI service and Streamlit dashboard are packaged as separate Docker
-images. Both application containers run as the non-root user `10001:10001`
-and include health checks.
+FastAPI and Streamlit use separate Docker images with health checks and run as
+non-root user `10001:10001`. Docker Compose includes PostgreSQL 16, Alembic
+migration, ingestion, both applications, and persistent database storage.
 
-Docker Compose provides a reproducible local environment containing:
+Copy `compose.env.example` to `.env.compose` and configure it locally. Environment
+files containing private settings are excluded from Git.
 
-- PostgreSQL 16
-- Alembic database migration
-- Idempotent TTC data ingestion
-- FastAPI reliability service
-- Streamlit dashboard
-- Persistent PostgreSQL storage using a named Docker volume
+```bash
+docker build -f Dockerfile.api -t ttc-reliability-api:v2-local .
+docker build -f Dockerfile.dashboard -t ttc-reliability-dashboard:v2-local .
+docker compose --env-file .env.compose up --detach postgres migrate
+docker compose --env-file .env.compose --profile tools run --rm ingest
+docker compose --env-file .env.compose up --detach api dashboard
+```
 
-### Build the images
+Open the API documentation at `http://127.0.0.1:8000/docs` and the dashboard at
+`http://127.0.0.1:8501`. Reprocessing the same file does not create duplicate
+events; the named Compose volume preserves database data across container recreation.
 
-    docker build \
-      --file Dockerfile.api \
-      --tag ttc-reliability-api:v2-local \
-      .
+## Phase 7 — Kubernetes deployment
 
-    docker build \
-      --file Dockerfile.dashboard \
-      --tag ttc-reliability-dashboard:v2-local \
-      .
+Application manifests are maintained in `kubernetes/base/`: PostgreSQL StatefulSet
+and storage, migration and ingestion jobs, scheduled ingestion CronJob, FastAPI,
+and Streamlit.
 
-### Configure the environment
+For a fresh deployment, prepare the namespace, persistent storage, and required
+configuration; deploy PostgreSQL, run migrations and initial ingestion, then
+deploy the API, dashboard, and scheduled ingestion. Install the Prometheus
+Operator stack before applying ServiceMonitor and PrometheusRule resources.
 
-    cp compose.env.example .env.compose
+To update the deployed API and dashboard from the repository root:
 
-Edit `.env.compose` and provide a private local PostgreSQL password. This file
-is excluded from Git.
+```bash
+kubectl apply -f kubernetes/base/api.yaml
+kubectl apply -f kubernetes/base/dashboard.yaml
+kubectl rollout status deployment/ttc-api -n ttc-monitor
+kubectl rollout status deployment/ttc-dashboard -n ttc-monitor
+```
 
-### Start the database and migration
+The application image versions above apply to these two Deployments; migration
+and ingestion jobs have separately managed image tags.
 
-    docker compose \
-      --env-file .env.compose \
-      up --detach postgres migrate
+### PostgreSQL persistent storage
 
-### Load the dataset
+PostgreSQL uses a statically defined NFS-backed PersistentVolume. The current
+lab implementation uses Synology NFS; another NFS server can also be used.
+Before deployment, replace `<NFS_SERVER_IP>` and `<NFS_EXPORT_PATH>` in
+`kubernetes/base/postgres-nfs-storage.yaml` with your server address and export path.
 
-    docker compose \
-      --env-file .env.compose \
-      --profile tools \
-      run --rm ingest
+The PostgreSQL StatefulSet in `kubernetes/base/postgres.yaml` currently uses
+`runAsUser: 1029` and `runAsGroup: 100` to match the Synology NFS ownership and
+identity mapping used in the lab. When rebuilding elsewhere, change these values
+to match your own NFS server permissions and identity mapping.
 
-The ingestion process is idempotent. Reprocessing the same source file does
-not create duplicate database records.
+## Phase 8 — Observability
 
-### Start the applications
+The `monitoring/` directory contains monitoring configuration and dashboard
+assets for the deployed stack:
 
-    docker compose \
-      --env-file .env.compose \
-      up --detach api dashboard
+- **ServiceMonitor:** discovers FastAPI `/metrics` for Prometheus scraping.
+- **Grafana ConfigMap + sidecar:** provisions the operational dashboard from
+  version-controlled configuration.
+- **PrometheusRule:** defines alerts for failed ingestion and stale ingestion
+  when a successful run is overdue.
 
-The local services are available at:
-
-- API documentation: `http://127.0.0.1:8000/docs`
-- Dashboard: `http://127.0.0.1:8501`
-
-PostgreSQL data remains available when containers are removed and recreated
-because the Compose named volume is retained.
-.
+Prometheus and Grafana expose application and cluster health, API performance,
+and ingestion status. Monitoring resource labels and namespace selectors must
+match the installed Prometheus Operator and Grafana sidecar configuration.

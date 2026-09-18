@@ -36,6 +36,9 @@ spec:
         - name: postgres
           image: postgres:16
 
+ # These UID/GID values match the NFS permissions used in the lab.
+ # Update them to match the ownership/mapping configured on your NFS server
+
           securityContext:
             runAsUser: 1029
             runAsGroup: 100

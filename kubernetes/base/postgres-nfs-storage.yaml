@@ -18,7 +18,11 @@ spec:
     - nfsvers=4.1
 
   nfs:
+# Replace with the address of your NFS server.
+
     server: <NFS_SERVER_IP>
+
+# Replace with the exported directory used for PostgreSQL data.      
     path: <NFS_EXPORT_PATH>
 
 ---
