@@ -60,5 +60,5 @@ Thumbs.db
 
 # Postgres
 
-kubernetes.base/postgres-secret.yaml
+kubernetes/base/postgres-secret.yaml
 
