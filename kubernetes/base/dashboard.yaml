@@ -33,7 +33,7 @@ spec:
 
     spec:
       imagePullSecrets:
-        - name: ghcr-secret
+        - name: ghcr-pull-secret
 
       containers:
         - name: dashboard
