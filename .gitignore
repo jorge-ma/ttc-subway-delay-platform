@@ -57,3 +57,8 @@ temp/
 Thumbs.db
 .vscode/
 .idea/
+
+# Postgres
+
+kubernetes.base/postgres-secret.yaml
+
