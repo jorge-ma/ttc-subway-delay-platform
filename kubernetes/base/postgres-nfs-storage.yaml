@@ -18,8 +18,8 @@ spec:
     - nfsvers=4.1
 
   nfs:
-    server: 10.10.10.199
-    path: /volume2/k8s-postgres/postgres-data
+    server: <NFS_SERVER_IP>
+    path: <NFS_EXPORT_PATH>
 
 ---
 apiVersion: v1
