@@ -166,6 +166,11 @@ events; the named Compose volume preserves database data across container recrea
 
 ## Phase 7 — Kubernetes deployment
 
+For a fresh installation on an existing Kubernetes cluster, follow the
+[phase-based public installation guide](INSTALLATION.md). It assumes public GHCR
+images and uses a local PostgreSQL PersistentVolume on a selected worker by
+default. No registry pull Secret is required.
+
 Application manifests are maintained in `kubernetes/base/`: PostgreSQL StatefulSet
 and storage, migration and ingestion jobs, scheduled ingestion CronJob, FastAPI,
 and Streamlit.
@@ -189,15 +194,15 @@ and ingestion jobs have separately managed image tags.
 
 ### PostgreSQL persistent storage
 
-PostgreSQL uses a statically defined NFS-backed PersistentVolume. The current
-lab implementation uses Synology NFS; another NFS server can also be used.
-Before deployment, replace `<NFS_SERVER_IP>` and `<NFS_EXPORT_PATH>` in
-`kubernetes/base/postgres-nfs-storage.yaml` with your server address and export path.
-
-The PostgreSQL StatefulSet in `kubernetes/base/postgres.yaml` currently uses
-`runAsUser: 1029` and `runAsGroup: 100` to match the Synology NFS ownership and
-identity mapping used in the lab. When rebuilding elsewhere, change these values
-to match your own NFS server permissions and identity mapping.
+The default public installation uses
+`kubernetes/base/postgres-local-storage.yaml`. Replace its
+`<WORKER_NODE_NAME>` placeholder with the selected worker's
+`kubernetes.io/hostname` label and prepare `/var/lib/ttc-postgres` on that
+worker. The optional NFS alternative is
+`kubernetes/base/postgres-nfs-storage.yaml`; apply only one storage manifest.
+Both define the neutral PVC name `postgres-data`, referenced by the PostgreSQL
+StatefulSet. The StatefulSet uses UID `1029` and GID `100`; set matching ownership
+on the local directory or NFS export.
 
 ## Phase 8 — Observability
 

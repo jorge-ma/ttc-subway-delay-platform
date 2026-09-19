@@ -23,9 +23,6 @@ spec:
         spec:
           restartPolicy: Never
 
-          imagePullSecrets:
-            - name: ghcr-secret
-
           volumes:
             - name: tmp
               emptyDir: {}

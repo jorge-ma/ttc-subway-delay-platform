@@ -15,9 +15,6 @@ spec:
     spec:
       restartPolicy: Never
 
-      imagePullSecrets:
-        - name: ghcr-secret
-
       containers:
         - name: migration
           image: ghcr.io/jorge-ma/ttc-reliability-v2-api:0.1.5

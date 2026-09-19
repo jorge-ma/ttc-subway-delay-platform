@@ -29,13 +29,15 @@ spec:
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: postgres-data-nfs
+  name: postgres-data
   namespace: ttc-monitor
 spec:
   accessModes:
     - ReadWriteOnce
 
   storageClassName: synology-nfs
+
+  volumeName: postgres-nfs-pv
 
   resources:
     requests:

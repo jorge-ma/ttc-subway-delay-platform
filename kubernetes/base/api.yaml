@@ -33,9 +33,6 @@ spec:
         app: ttc-api
 
     spec:
-      imagePullSecrets:
-        - name: ghcr-secret
-
       containers:
         - name: api
           image: ghcr.io/jorge-ma/ttc-reliability-v2-api:0.1.5
