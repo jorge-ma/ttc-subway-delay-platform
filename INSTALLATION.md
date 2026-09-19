@@ -217,17 +217,17 @@ Deploy Streamlit after the API is healthy. Access it with a local port-forward u
 
 **Purpose:** Present the reliability data.
 **Why it is required:** This is the user-facing view of the ingested records.
-**Where to run it:** Administrator workstation and local browser.
+**Where to run it:** Kubernetes Controller and local browser.
 
 **Procedure / Commands**
 
 ```bash
 kubectl apply -n ttc-monitor -f kubernetes/base/dashboard.yaml
 kubectl rollout status -n ttc-monitor deployment/ttc-dashboard --timeout=5m
-kubectl port-forward -n ttc-monitor service/ttc-dashboard 8501:8501
+kubectl port-forward --address 0.0.0.0 -n ttc-monitor service/ttc-dashboard 8501:8501
 ```
 
-**Verification / Success criteria:** Open `http://127.0.0.1:8501` and confirm the dashboard renders data. Stop the port-forward after inspection.
+**Verification / Success criteria:** Open `http://<CONTROLLER_IP>:8501` and confirm the dashboard renders data. Stop the port-forward after inspection.
 
 ## Phase 12 — Optional Prometheus and Grafana
 
