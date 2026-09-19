@@ -70,12 +70,12 @@ Create the PostgreSQL data directory on the selected worker before scheduling th
 
 ```bash
 sudo mkdir -p /var/lib/ttc-postgres
-sudo chown 1029:100 /var/lib/ttc-postgres
+sudo chown 999:999 /var/lib/ttc-postgres
 sudo chmod 700 /var/lib/ttc-postgres
-sudo stat -c '%U:%G %a %n' /var/lib/ttc-postgres
+sudo stat -c '%u:%g %a %n' /var/lib/ttc-postgres
 ```
 
-**Verification / Success criteria:** The path exists with ownership `1029:100` and mode `700`, matching the committed `postgres.yaml`. If you change its security context, change the directory ownership to match.
+**Verification / Success criteria:** The path exists with ownership `999:999` and mode `700`, matching the default `postgres.yaml` and Debian-based `postgres:16` image. If you change its security context or image variant, change the directory ownership to match.
 
 ## Phase 5 — Create the PostgreSQL Secret
 
@@ -280,4 +280,4 @@ curl -f http://127.0.0.1:8000/api/v1/reliability/summary
 
 ## Advanced option — NFS storage
 
-Use NFS only when your cluster has a working NFS server and every eligible worker has the required NFS client support. Provide a separate, writable export for this installation, and validate write access with UID `1029` and GID `100` or adjust `postgres.yaml` and server ownership together. In Phase 6, render `kubernetes/base/postgres-nfs-storage.yaml` with real values for `<NFS_SERVER_IP>` and `<NFS_EXPORT_PATH>`, apply it **instead of** the local storage manifest, and verify that PVC `postgres-data` is `Bound` to `postgres-nfs-pv`. Both storage manifests define the same claim, so never apply both. Migrating an existing database between local storage and NFS requires a database backup and restore; changing the PV alone does not move data.
+Use NFS only when your cluster has a working NFS server and every eligible worker has the required NFS client support. Provide a separate, writable export for this installation, and validate write access as UID/GID `999:999` with the default `postgres.yaml`. If your NFS server uses a different identity mapping, update the server permissions and PostgreSQL security context together, then verify database startup. In Phase 6, render `kubernetes/base/postgres-nfs-storage.yaml` with real values for `<NFS_SERVER_IP>` and `<NFS_EXPORT_PATH>`, apply it **instead of** the local storage manifest, and verify that PVC `postgres-data` is `Bound` to `postgres-nfs-pv`. Both storage manifests define the same claim, so never apply both. Migrating an existing database between local storage and NFS requires a database backup and restore; changing the PV alone does not move data.

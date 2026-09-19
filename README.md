@@ -201,8 +201,9 @@ The default public installation uses
 worker. The optional NFS alternative is
 `kubernetes/base/postgres-nfs-storage.yaml`; apply only one storage manifest.
 Both define the neutral PVC name `postgres-data`, referenced by the PostgreSQL
-StatefulSet. The StatefulSet uses UID `1029` and GID `100`; set matching ownership
-on the local directory or NFS export.
+StatefulSet. The default StatefulSet uses UID and GID `999:999`, matching
+the Debian-based `postgres:16` image. Set matching ownership on the local
+worker directory or configure equivalent permissions on an optional NFS export.
 
 ## Phase 8 — Observability
 

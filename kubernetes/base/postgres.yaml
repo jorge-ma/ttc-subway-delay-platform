@@ -36,12 +36,12 @@ spec:
         - name: postgres
           image: postgres:16
 
- # Match these UID/GID values on the selected worker's data directory.
- # For NFS, configure matching ownership and identity mapping on the server.
+ # The Debian-based postgres:16 image uses UID/GID 999:999.
+ # Match these values on the selected worker's data directory.
 
           securityContext:
-            runAsUser: 1029
-            runAsGroup: 100
+            runAsUser: 999
+            runAsGroup: 999
             runAsNonRoot: true
             allowPrivilegeEscalation: false  
 
