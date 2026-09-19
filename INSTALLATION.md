@@ -10,25 +10,34 @@ Get the application source and identify its Kubernetes manifests. This lets late
 
 **Purpose:** Obtain the deployment files.
 **Why it is required:** Kubernetes resources must be applied from a consistent release.
-**Where to run it:** Administrator workstation.
+**Where to run it:** Kubernetes Controller.
 
 **Procedure / Commands**
 
 ```bash
-git clone https://github.com/<GITHUB_OWNER>/ttc-reliability-monitor-v2.git
-cd ttc-reliability-monitor-v2
+git clone https://github.com/jorge-ma/ttc-subway-delay-platform.git
+cd ttc-subway-delay-platform
 find kubernetes -type f | sort
 ```
 
-**Verification / Success criteria:** The checkout contains PostgreSQL, migration, API, ingestion, dashboard, and monitoring manifests. Confirm image tags in those files refer to the intended public release.
+**Verification / Success criteria:** The checkout contains:
+kubernetes/base/api.yaml
+kubernetes/base/dashboard.yaml
+kubernetes/base/ingestion-cronjob.yaml
+kubernetes/base/migration-job.yaml
+kubernetes/base/namespaces.yaml
+kubernetes/base/postgres-local-storage.yaml
+kubernetes/base/postgres-nfs-storage.yaml
+kubernetes/base/postgres-secret.example.yaml
+kubernetes/base/postgres.yaml
 
 ## Phase 2 — Confirm cluster access and create the namespace
 
-Confirm the context before creating application resources. The namespace keeps TTC resources together and must exist before namespaced manifests are applied.
+Confirm the context before creating application resources. A namespace keeps cluster resources organizes and must exist before namespaced manifests are applied.
 
 **Purpose:** Establish the deployment target.
 **Why it is required:** Applying to the wrong context or a missing namespace causes failures or unintended changes.
-**Where to run it:** Administrator workstation.
+**Where to run it:** Kubernetes Controller.
 
 **Procedure / Commands**
 
@@ -46,7 +55,7 @@ Choose a schedulable worker with sufficient durable disk space. The local volume
 
 **Purpose:** Pin storage to a known node.
 **Why it is required:** A local PV can only be mounted by pods on its host.
-**Where to run it:** Administrator workstation.
+**Where to run it:** Kubernetes Controller.
 
 **Procedure / Commands**
 
@@ -83,7 +92,7 @@ Start from the repository's example Secret and enter a unique password locally. 
 
 **Purpose:** Supply database credentials to PostgreSQL and the application.
 **Why it is required:** The database and clients must agree on their credentials.
-**Where to run it:** Administrator workstation.
+**Where to run it:** Kubernetes Controller.
 
 **Procedure / Commands**
 
@@ -105,7 +114,7 @@ Use `postgres-local-storage.yaml` after replacing `<WORKER_NODE_NAME>` with the 
 
 **Purpose:** Bind PostgreSQL to persistent local storage.
 **Why it is required:** Database data must survive pod replacement.
-**Where to run it:** Administrator workstation.
+**Where to run it:** Kubernetes Controller.
 
 **Procedure / Commands**
 
@@ -124,7 +133,7 @@ Apply the PostgreSQL Service and StatefulSet after storage and credentials are r
 
 **Purpose:** Start the application database.
 **Why it is required:** Migrations and API connections require a healthy PostgreSQL instance.
-**Where to run it:** Administrator workstation.
+**Where to run it:** Kubernetes Controller.
 
 **Procedure / Commands**
 
@@ -142,7 +151,7 @@ Apply the migration Job after PostgreSQL is ready. The Job should use the same d
 
 **Purpose:** Create or update the database schema.
 **Why it is required:** The API and ingestion expect current tables.
-**Where to run it:** Administrator workstation.
+**Where to run it:** Kubernetes Controller.
 
 **Procedure / Commands**
 
@@ -160,7 +169,7 @@ Start the API after the schema is current. The deployment should reference a pub
 
 **Purpose:** Serve reliability data.
 **Why it is required:** The dashboard and monitoring stack depend on the API.
-**Where to run it:** Administrator workstation.
+**Where to run it:** Kubernetes Controller.
 
 **Procedure / Commands**
 
@@ -177,23 +186,30 @@ curl -f http://127.0.0.1:8000/ready
 
 ## Phase 10 — Schedule and test ingestion
 
-Apply the CronJob so new data is ingested on its configured schedule. Create one manual Job from the CronJob to validate credentials, input data access, and database writes immediately.
+Apply the ingestion CronJob so new TTC data can be loaded on its configured schedule. Before relying on the schedule, create one manual Job from the CronJob and wait for it to complete. The commands below automatically generate a unique Job name using the current timestamp so repeated tests do not conflict with an existing Job.
 
-**Purpose:** Populate and refresh reliability records.
-**Why it is required:** An empty database yields no useful dashboard results.
-**Where to run it:** Administrator workstation.
+**Purpose:** Populate the PostgreSQL database and verify the ingestion workflow.
+**Why it is required:** The API and dashboard depend on ingested reliability data. Running a manual Job confirms that source-data access, database connectivity, and ingestion logic are working before waiting for the scheduled CronJob.
+**Where to run it:** Kubernetes Controller.
 
 **Procedure / Commands**
-
+Apply the CronJob:
 ```bash
 kubectl apply -n ttc-monitor -f kubernetes/base/ingestion-cronjob.yaml
+Verify it:
 kubectl get cronjob -n ttc-monitor
-kubectl create job -n ttc-monitor --from=cronjob/ttc-ingestion ingestion-manual-<UNIQUE_SUFFIX>
-kubectl wait -n ttc-monitor --for=condition=complete job/ingestion-manual-<UNIQUE_SUFFIX> --timeout=15m
-kubectl logs -n ttc-monitor job/ingestion-manual-<UNIQUE_SUFFIX>
+Create a unique name for the manual test Job:
+JOB_NAME="ingestion-manual-$(date +%Y%m%d%H%M%S)"
+Create the Job from the CronJob:
+kubectl create job -n ttc-monitor --from=cronjob/ttc-ingestion "$JOB_NAME"
+Wait for the Job to finish:
+kubectl wait -n ttc-monitor --for=condition=complete "$JOB_NAME" --timeout=15m
+Review the ingestion logs:
+kubectl logs -n ttc-monitor job "$JOB_NAME"
 ```
 
 **Verification / Success criteria:** The manual Job completes; logs report processed or inserted records without a database or source-data error.
+kubectl get job "$JOB_NAME" -n ttc-monitor
 
 ## Phase 11 — Deploy and access the dashboard
 
