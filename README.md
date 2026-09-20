@@ -1,28 +1,32 @@
-## TTC Reliability Monitor
+TTC Reliability Monitor
 
 TTC Reliability Monitor helps people explore how subway delays affect service across Toronto. It brings together public TTC delay data, a data pipeline, an API, and a dashboard to show where delays happen, how long they last, and what causes them.
 
 The project also demonstrates how to run and monitor a data application on Kubernetes, from scheduled ingestion and persistent storage through to a user-facing dashboard.
 
+![TTC Reliability Monitor architecture](ttc-architecture.png)
+
 ## How it works
 
-```text
-City of Toronto Open Data → scheduled ingestion → PostgreSQL → FastAPI → Streamlit dashboard
-                                                       │
-                                                       └→ Prometheus metrics → Grafana
-```
+A scheduled job collects TTC Subway Delay Data from City of Toronto Open Data, checks the records, and saves them in PostgreSQL. It can run again without adding duplicate events. The full source dataset is not stored in the repository.
 
-A scheduled Kubernetes job loads and checks TTC Subway Delay Data before saving it in PostgreSQL. Reprocessing the same records does not create duplicates. Alembic manages database changes, and the source dataset is not stored in the repository.
-
-The FastAPI service turns the stored records into reliability summaries. The Streamlit dashboard presents those results through trends, comparisons, and rankings that are easier to explore than raw delay records.
+FastAPI uses the stored data to calculate reliability figures. Streamlit presents those figures in a dashboard where people can explore patterns by month, subway line, station, and cause. Optional Prometheus and Grafana monitoring helps track the health of the application and its data pipeline.
 
 ## What you can explore
 
-The dashboard shows the number of delay events, total and average delay time, the latest available data date, monthly trends, comparisons between subway lines, station rankings, and common delay causes. You can filter by line and view the original TTC incident codes and their official descriptions. The current rider-facing views focus on Lines 1, 2, and 4; historical Line 3 records remain in the dataset.
+The dashboard gives an at-a-glance view of how often delays occur and how much time they add up to. It shows the latest available data, monthly trends, line comparisons, station rankings, and common causes. Visitors can filter by line or look more closely at individual TTC incident codes. The main views focus on Lines 1, 2, and 4; historical Line 3 records are still included in the data.
 
-Delay descriptions come from official TTC reference data published through City of Toronto Open Data. If a code has no documented description, the project labels it **Undocumented TTC code** rather than guessing its meaning. Broader cause groups in the dashboard are presentation categories, not official TTC classifications.
+**All subway lines:** the dashboard overview and line selector.
 
-The read-only API provides the same underlying data through these endpoints:
+![TTC Reliability Monitor dashboard showing the all-lines overview](images/dashboard-overview.png)
+
+**Line 2:** an example of the line filter and month-over-month comparison.
+
+![TTC Reliability Monitor dashboard filtered to Line 2](images/dashboard-line-2.png)
+
+The code descriptions come from official TTC reference data published through City of Toronto Open Data. When no description is available, the dashboard says **Undocumented TTC code**. Its broader cause groups help readers explore the data, but they are not official TTC classifications.
+
+The read-only API makes these results available to the dashboard and other clients:
 
 | Endpoint | What it provides |
 | --- | --- |
@@ -32,7 +36,7 @@ The read-only API provides the same underlying data through these endpoints:
 | `GET /api/v1/reliability/causes` | Delay-code rankings and descriptions |
 | `GET /api/v1/reliability/monthly` | Monthly trends |
 
-Interactive API documentation is available at `/docs`. The service also exposes `/health`, `/ready`, and `/metrics` for health checks and monitoring.
+Developers can explore the API at `/docs`. The `/health`, `/ready`, and `/metrics` endpoints support health checks and monitoring.
 
 ## Running the project
 
@@ -42,9 +46,12 @@ PostgreSQL stores its data through the `postgres-data` PersistentVolumeClaim. By
 
 Monitoring is optional. With `kube-prometheus-stack`, Prometheus can collect API metrics, alert on failed or stale ingestion, and display application and ingestion information in Grafana. The project includes the TTC-specific `ServiceMonitor`, `PrometheusRule`, and Grafana dashboard ConfigMap needed for that integration.
 
+**Grafana:** API performance and ingestion status in the operations dashboard.
+
+![Grafana dashboard showing TTC API metrics and ingestion status](images/grafana-monitoring.png)
+
 The README's published application image examples are `ghcr.io/jorge-ma/ttc-reliability-v2-api:0.1.5` and `ghcr.io/jorge-ma/ttc-reliability-v2-dashboard:0.1.1`. Check the deployment manifests for the image tags used by a particular release.
 
 ## Installation guide
 
 See [INSTALLATION.md](INSTALLATION.md) for prerequisites, deployment steps, storage choices, validation, and access to the dashboard and optional monitoring tools.
-
