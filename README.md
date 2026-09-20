@@ -1,4 +1,4 @@
-TTC Reliability Monitor
+## TTC Reliability Monitor
 
 TTC Reliability Monitor helps people explore how subway delays affect service across Toronto. It brings together public TTC delay data, a data pipeline, an API, and a dashboard to show where delays happen, how long they last, and what causes them.
 
