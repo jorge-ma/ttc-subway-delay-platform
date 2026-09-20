@@ -291,7 +291,7 @@ Find the Prometheus and Grafana services:
 kubectl get service -n monitoring
 
 **Verification / Success criteria:** 
-erification / Success criteria
+
 The monitoring integration is complete when:
 ✓ ServiceMonitor ttc-api exists
 ✓ PrometheusRule ttc-alerts exists
