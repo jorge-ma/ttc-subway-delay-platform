@@ -1,8 +1,19 @@
 # TTC Reliability Monitor: public Kubernetes installation
 
-This guide assumes a working Kubernetes cluster, a schedulable worker, and configured `kubectl` access. The application images in GHCR are public. PostgreSQL uses a local PersistentVolume on one selected worker by default; this ties the database to that node. Replace every angle-bracket placeholder before running a command. Commands below assume a POSIX shell on the administrator workstation unless stated otherwise.
-
-The commands use the `ttc-monitor` namespace and paths in this repository. No credential values belong in Git. Run shell commands from the repository root unless a phase says otherwise. This is a fresh-install guide; if PostgreSQL already contains data, back it up before changing storage.
+This guide explains how to deploy the TTC Reliability Monitor to an existing Kubernetes cluster.
+It assumes you already have:
+- a working Kubernetes cluster
+- at least one schedulable worker node
+- kubectl configured and able to communicate with the cluster
+- access to a POSIX-compatible shell
+The application container images are published publicly in GitHub Container Registry (GHCR), so no registry credentials or image pull secrets are required.
+By default, PostgreSQL uses a local PersistentVolume on one selected worker node. This keeps the installation self-contained and avoids requiring external storage such as NFS. Because the volume is local to that worker, the PostgreSQL pod is tied to that node.
+Before running the commands:
+- Replace every <PLACEHOLDER> with a value appropriate for your environment.
+- Run commands from the repository root unless a phase explicitly says otherwise.
+- The application uses the ttc-monitor Kubernetes namespace.
+- Do not store passwords, tokens, or other credentials in Git.
+- This guide assumes a fresh installation. If PostgreSQL already contains data, back it up before changing persistent-storage configuration.
 
 ## Phase 1 — Clone and inspect the repository
 
