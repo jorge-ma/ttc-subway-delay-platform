@@ -231,25 +231,38 @@ kubectl port-forward --address 0.0.0.0 -n ttc-monitor service/ttc-dashboard 8501
 
 ## Phase 12 — Optional Prometheus and Grafana
 
-Install the monitoring stack only if the cluster does not already provide compatible Prometheus and Grafana services. Helm installs the operator and supporting services; set a known release name because the ServiceMonitor and dashboard selectors must match it.
+The project uses the kube-prometheus-stack Helm chart to install Prometheus, Grafana, Alertmanager, and the Prometheus Operator. The Helm release name is monitoring because the TTC monitoring resources are designed to work with that release.
 
-**Purpose:** Add cluster and application observability.
-**Why it is required:** Metrics, alerts, and Grafana dashboards depend on these services.
+**Purpose:** Add monitoring, metrics, alerts, and dashboards.
+**Why it is required:** The TTC ServiceMonitor, alert rules, and Grafana dashboard require Prometheus and Grafana to be available in the cluster.
 **Where to run it:** Administrator workstation with Helm and `kubectl`.
 
 **Procedure / Commands**
 
 ```bash
+Install helm:
+sudo snap install helm --classic
+Add the Prometheus Helm repository:
 helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
 helm repo update
-kubectl create namespace monitoring --dry-run=client -o yaml | kubectl apply -f -
+Create the monitoring namespace:
+kubectl create namespace monitoring
+Install the monitoring stack
 helm upgrade --install monitoring prometheus-community/kube-prometheus-stack \
   --namespace monitoring --wait --timeout 10m \
   -f monitoring/monitoring-values.yaml
+Verify the monitoring pods:
 kubectl get pods -n monitoring
 ```
+Grafana password:
+The Helm chart generates the Grafana administrator password automatically. Retrieve it only when needed:
+kubectl get secret monitoring-grafana \
+  -n monitoring \
+  -o jsonpath="{.data.admin-password}" | base64 -d
+echo
 
 **Verification / Success criteria:** The release is deployed and Prometheus and Grafana pods are ready. The supplied values file has no Grafana password; retrieve the chart-generated admin password only into a private terminal session or manage it through your own Secret. Do not commit credentials.
+
 
 ## Phase 13 — Optional TTC monitoring resources
 
