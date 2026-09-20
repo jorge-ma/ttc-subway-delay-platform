@@ -18,11 +18,11 @@ The dashboard gives an at-a-glance view of how often delays occur and how much t
 
 **All subway lines:** the dashboard overview and line selector.
 
-![TTC Reliability Monitor dashboard showing the all-lines overview](images/dashboard-overview.png)
+![TTC Reliability Monitor dashboard showing the all-lines overview](images/TTC%20Reliability%20Monitor.png)
 
 **Line 2:** an example of the line filter and month-over-month comparison.
 
-![TTC Reliability Monitor dashboard filtered to Line 2](images/dashboard-line-2.png)
+![TTC Reliability Monitor dashboard filtered to Line 2](images/Line2.png)
 
 The code descriptions come from official TTC reference data published through City of Toronto Open Data. When no description is available, the dashboard says **Undocumented TTC code**. Its broader cause groups help readers explore the data, but they are not official TTC classifications.
 
@@ -48,7 +48,13 @@ Monitoring is optional. With `kube-prometheus-stack`, Prometheus can collect API
 
 **Grafana:** API performance and ingestion status in the operations dashboard.
 
-![Grafana dashboard showing TTC API metrics and ingestion status](images/grafana-monitoring.png)
+![Grafana dashboard showing TTC API metrics and ingestion status](images/Dashboards%20-%20Grafana.png)
+
+The README's published application image examples are `ghcr.io/jorge-ma/ttc-reliability-v2-api:0.1.5` and `ghcr.io/jorge-ma/ttc-reliability-v2-dashboard:0.1.1`. Check the deployment manifests for the image tags used by a particular release.
+
+## Installation guide
+
+See [INSTALLATION.md](INSTALLATION.md) for prerequisites, deployment steps, storage choices, validation, and access to the dashboard and optional monitoring tools.
 
 The README's published application image examples are `ghcr.io/jorge-ma/ttc-reliability-v2-api:0.1.5` and `ghcr.io/jorge-ma/ttc-reliability-v2-dashboard:0.1.1`. Check the deployment manifests for the image tags used by a particular release.
 
