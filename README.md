@@ -1,10 +1,10 @@
-TTC Reliability Monitor
+## TTC Reliability Monitor
 
 TTC Reliability Monitor helps people explore how subway delays affect service across Toronto. It brings together public TTC delay data, a data pipeline, an API, and a dashboard to show where delays happen, how long they last, and what causes them.
 
 The project also demonstrates how to run and monitor a data application on Kubernetes, from scheduled ingestion and persistent storage through to a user-facing dashboard.
 
-![TTC Reliability Monitor architecture](ttc-architecture.png)
+![TTC Reliability Monitor architecture](images/ttc-architecture.png)
 
 ## How it works
 
