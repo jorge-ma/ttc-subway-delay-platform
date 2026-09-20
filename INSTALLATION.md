@@ -266,23 +266,75 @@ echo
 
 ## Phase 13 — Optional TTC monitoring resources
 
-Apply the ServiceMonitor, PrometheusRule, and Grafana dashboard provisioning resources once the monitoring stack is ready. Match their labels and namespaces to the operator and Grafana sidecar configuration used by the Helm release.
+Use this phase after Prometheus and Grafana are running.
+These manifests add the TTC-specific monitoring configuration that the base kube-prometheus-stack does not include. They tell Prometheus to scrape the TTC API, add TTC alert rules, and automatically provision the TTC Grafana dashboard.
 
-**Purpose:** Scrape API metrics, install alerts, and display TTC charts.
-**Why it is required:** The base Helm chart has no TTC-specific configuration.
-**Where to run it:** Administrator workstation.
+**Purpose:** Add TTC application metrics, alerts, and dashboard visualizations.
+**Why it is required:** Prometheus and Grafana are installed by the Helm chart, but they do not automatically know how to monitor the TTC application
+**Where to run it:** Kubernetes Controller with kubectl configured
 
 **Procedure / Commands**
-
+Apply the TTC monitoring resources
 ```bash
 kubectl apply -f monitoring/ttc-api-servicemonitor.yaml
 kubectl apply -f monitoring/ttc-alerts.yaml
 kubectl apply -f monitoring/ttc-grafana-dashboard-configmap.yaml
-kubectl get servicemonitor,prometheusrule -A
+
+Verify the ServiceMonitor and alert rules:
+kubectl get servicemonitor -n monitoring
+kubectl get prometheusrule -n monitoring
+
+Verify the Grafana dashboard ConfigMap:
 kubectl get configmap -A -l grafana_dashboard=1
 ```
+Find the Prometheus and Grafana services:
+kubectl get service -n monitoring
 
-**Verification / Success criteria:** The ServiceMonitor and PrometheusRule are present, the API target is `UP` in Prometheus, the alert rule appears, and the TTC dashboard appears in Grafana. Use `kubectl get service -n monitoring` to find the Prometheus and Grafana Service names, then run `kubectl port-forward -n monitoring service/<PROMETHEUS_SERVICE_NAME> 9090:9090` and `kubectl port-forward -n monitoring service/<GRAFANA_SERVICE_NAME> 3000:80` in separate terminals. Open `http://127.0.0.1:9090/targets` and `http://127.0.0.1:3000`.
+**Verification / Success criteria:** 
+erification / Success criteria
+The monitoring integration is complete when:
+✓ ServiceMonitor ttc-api exists
+✓ PrometheusRule ttc-alerts exists
+✓ TTC Grafana dashboard ConfigMap exists
+✓ ttc-api target is UP in Prometheus
+✓ TTC alert rules are visible in Prometheus
+✓ TTC dashboard appears in Grafana
+Note: The --address 0.0.0.0 option makes the port-forward reachable from other machines on the same network. Use this only in a trusted lab/testing environment.
+
+Access Prometheus
+Run:
+kubectl port-forward \
+  --address 0.0.0.0 \
+  -n monitoring \
+  service/monitoring-kube-prometheus-prometheus \
+  9090:9090
+Keep that terminal open.
+From another machine on the same network, open:
+http://<KUBERNETES_CONTROLLER_IP>:9090/targets
+Find the ttc-api target.
+It should show:
+UP
+
+Access Grafana
+In a second terminal, run:
+kubectl port-forward \
+  --address 0.0.0.0 \
+  -n monitoring \
+  service/monitoring-grafana \
+  3000:80
+From another machine on the same network, open:
+http://<KUBERNETES_CONTROLLER_IP>:3000
+Retrieve the Grafana admin password if needed:
+kubectl get secret monitoring-grafana \
+  -n monitoring \
+  -o jsonpath="{.data.admin-password}" | base64 -d
+echo
+Log in with:
+Username: admin
+Password: <generated password>
+Then open Dashboards and confirm the TTC dashboard appears.
+
+
 
 ## Phase 14 — Validate the installation
 
