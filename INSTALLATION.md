@@ -17,21 +17,20 @@ Before running the commands:
 
 ## Phase 1 — Clone and inspect the repository
 
-Get the application source and identify its Kubernetes manifests. This lets later commands refer to the same checkout and helps catch path differences before anything is deployed.
+Start by cloning the project repository and confirming that the Kubernetes deployment manifests are present. This ensures all later commands are run from a consistent copy of the project and helps identify any missing or renamed files before deployment begins.
 
-**Purpose:** Obtain the deployment files.
-**Why it is required:** Kubernetes resources must be applied from a consistent release.
-**Where to run it:** Kubernetes Controller.
+Purpose: Obtain the application source code and Kubernetes deployment manifests.
+Why it is required: The installation depends on the manifests stored in the repository. Verifying them at the beginning prevents path or file-name issues later in the deployment.
+Where to run it: Kubernetes Controller.
 
-**Procedure / Commands**
-
-```bash
+Clone the repository:
 git clone https://github.com/jorge-ma/ttc-subway-delay-platform.git
+Enter the project directory:
 cd ttc-subway-delay-platform
+List the Kubernetes manifests:
 find kubernetes -type f | sort
-```
-
-**Verification / Success criteria:** The checkout contains:
+Verification / Success criteria
+Confirm that the following files are present:
 kubernetes/base/api.yaml
 kubernetes/base/dashboard.yaml
 kubernetes/base/ingestion-cronjob.yaml
@@ -41,42 +40,61 @@ kubernetes/base/postgres-local-storage.yaml
 kubernetes/base/postgres-nfs-storage.yaml
 kubernetes/base/postgres-secret.example.yaml
 kubernetes/base/postgres.yaml
+If these files are present, the repository is ready for the next deployment phase.
 
 ## Phase 2 — Confirm cluster access and create the namespace
 
-Confirm the context before creating application resources. A namespace keeps cluster resources organizes and must exist before namespaced manifests are applied.
-
-**Purpose:** Establish the deployment target.
-**Why it is required:** Applying to the wrong context or a missing namespace causes failures or unintended changes.
-**Where to run it:** Kubernetes Controller.
-
-**Procedure / Commands**
-
-```bash
+Before deploying the application, confirm that kubectl is connected to the correct Kubernetes cluster. Then create the ttc-monitor namespace, which keeps the application resources grouped together and separated from other workloads in the cluster.
+Purpose: Confirm the target cluster and prepare the application namespace.
+Why it is required: Running commands against the wrong Kubernetes context can modify the wrong cluster. The namespace must also exist before namespaced TTC resources can be created.
+Where to run it: Kubernetes Controller.
+Procedure / Commands
+Confirm the current Kubernetes context:
 kubectl config current-context
+Confirm the cluster nodes are reachable:
 kubectl get nodes -o wide
-kubectl create namespace ttc-monitor --dry-run=client -o yaml | kubectl apply -f -
-```
-
-**Verification / Success criteria:** The intended cluster appears and `kubectl get namespace ttc-monitor` reports `Active`.
+Create the ttc-monitor namespace:
+kubectl create namespace ttc-monitor \
+  --dry-run=client \
+  -o yaml | kubectl apply -f -
+The --dry-run=client -o yaml | kubectl apply -f - pattern makes the command safe to run more than once. If the namespace already exists, Kubernetes keeps it instead of returning an error.
+Verification / Success criteria
+Verify the namespace:
+kubectl get namespace ttc-monitor
+Expected status:
+NAME          STATUS   AGE
+ttc-monitor   Active   ...
+Also confirm that the nodes shown by kubectl get nodes -o wide belong to the cluster where you intend to deploy the application.
 
 ## Phase 3 — Select a PostgreSQL worker
 
-Choose a schedulable worker with sufficient durable disk space. The local volume's node affinity must use that worker's `kubernetes.io/hostname` label value, which may differ from the displayed node name.
-
-**Purpose:** Pin storage to a known node.
-**Why it is required:** A local PV can only be mounted by pods on its host.
-**Where to run it:** Kubernetes Controller.
-
-**Procedure / Commands**
-
-```bash
+Because this installation uses a local PersistentVolume, PostgreSQL storage must be tied to one specific Kubernetes worker node. Choose a healthy, schedulable worker with enough local disk space and identify the exact kubernetes.io/hostname label value that Kubernetes will use for local-volume node affinity.
+Purpose: Select the worker node that will host the PostgreSQL data directory.
+Why it is required: Local PersistentVolumes are physically tied to one node. Kubernetes must schedule the PostgreSQL pod onto that same worker so it can access the local storage path.
+Where to run it: Kubernetes Controller.
+Procedure / Commands
+List the cluster nodes and their labels:
 kubectl get nodes --show-labels
-kubectl get node <WORKER_NODE_NAME> -o jsonpath='{.metadata.labels.kubernetes\.io/hostname}{"\n"}'
+Choose the worker you want to use for PostgreSQL, then retrieve its hostname label:
+kubectl get node <WORKER_NODE_NAME> \
+  -o jsonpath='{.metadata.labels.kubernetes\.io/hostname}{"\n"}'
+Review the selected node:
 kubectl describe node <WORKER_NODE_NAME>
-```
-
-**Verification / Success criteria:** The worker is `Ready`, schedulable, and the label output is the value inserted into `postgres-local-storage.yaml`.
+Confirm that the node is:
+- Ready
+- not cordoned
+- not under disk pressure
+- suitable for the PostgreSQL workload
+Verification / Success criteria
+The selected worker is healthy and schedulable.
+Record the value returned by:
+kubectl get node <WORKER_NODE_NAME> \
+  -o jsonpath='{.metadata.labels.kubernetes\.io/hostname}{"\n"}'
+Use that exact value in postgres-local-storage.yaml under the local PV nodeAffinity section.
+For example:
+values:
+  - worker1
+The hostname label may match the node name, but do not assume it does—use the value returned by Kubernetes.
 
 ## Phase 4 — Prepare the worker directory
 
