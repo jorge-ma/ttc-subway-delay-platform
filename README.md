@@ -61,3 +61,11 @@ The README's published application image examples are `ghcr.io/jorge-ma/ttc-reli
 ## Installation guide
 
 See [INSTALLATION.md](INSTALLATION.md) for prerequisites, deployment steps, storage choices, validation, and access to the dashboard and optional monitoring tools.
+
+## Contact
+
+Built by **Jorge Maldonado**.
+
+- LinkedIn: [linkedin.com/in/your-profile](https://[www.linkedin.com/in/your-profile](https://www.linkedin.com/in/jmaldon/)
+- GitHub: [github.com/your-username](https://github.com/jorge-ma)
+
