@@ -4,6 +4,8 @@ TTC Reliability Monitor helps people explore how subway delays affect service ac
 
 The project also demonstrates how to run and monitor a data application on Kubernetes, from scheduled ingestion and persistent storage through to a user-facing dashboard.
 
+> **Note:** This is an independent portfolio project. It is not affiliated with or endorsed by the Toronto Transit Commission or the City of Toronto.
+
 ![TTC Reliability Monitor architecture](images/ttc-architecture.png)
 
 ## How it works
