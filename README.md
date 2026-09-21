@@ -67,5 +67,5 @@ See [INSTALLATION.md](INSTALLATION.md) for prerequisites, deployment steps, stor
 Built by **Jorge Maldonado**.
 
 - LinkedIn: [linkedin.com/in/your-profile](https://[www.linkedin.com/in/your-profile](https://www.linkedin.com/in/jmaldon/)
-- GitHub: [github.com/your-username](https://github.com/jorge-ma)
+- GitHub: [github.com/jorge-ma](https://github.com/jorge-ma)
 
